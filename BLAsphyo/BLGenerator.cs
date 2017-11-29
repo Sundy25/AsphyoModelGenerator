@@ -9,23 +9,24 @@ using System.Threading.Tasks;
 namespace BLAsphyo {
     public class BLGenerator {
 
-
-        public async Task<bool> FormatedBEUClass(String FilePath, String Database, List<String> SelectedTables, bool AsphyoReferences) {
+        public async Task<bool> FormatedBEUClass(String FilePath, String Database, List<String> SelectedTables, bool AsphyoReferences, bool onlyModels) {
 
             return await Task.Run(async () => {
 
-                if( Directory.Exists(FilePath + "\\Model\\Domain") || Directory.Exists(FilePath + "\\Model\\DAO") ) {
-                    throw new BEUAsphyo.Exception.BEUExceptionBL("The path has already a Asphyo Model folder, please move it");
-                }
-                if( !AsphyoReferences ) {
+                if( Directory.Exists(FilePath + "\\Model")) throw new BEUAsphyo.Exception.BEUExceptionBL("The path has already a Asphyo 'Model' folder, please move it");
+                
+                if( !onlyModels ) {
                     if( Directory.Exists(FilePath + "\\Model\\Databases") ) {
                         throw new BEUAsphyo.Exception.BEUExceptionBL("The path has already a Asphyo Model folder, please move it");
                     }
                     Directory.CreateDirectory(FilePath + "\\Model\\Databases");
-                    File.WriteAllText(FilePath + "\\Model\\Databases\\MySQL.php", CreateConnectionClass(), new UTF8Encoding(false));
+                    File.WriteAllText(FilePath + "\\Model\\Databases\\MySQL.php", CreateMySQLConnectionClass(), new UTF8Encoding(false));
                 }
+
+                if(!onlyModels)
+                    Directory.CreateDirectory(FilePath + "\\Model\\DAO");
                 Directory.CreateDirectory(FilePath + "\\Model\\Domain");
-                Directory.CreateDirectory(FilePath + "\\Model\\DAO");
+
 
 
                 foreach( String Table in SelectedTables ) {
@@ -57,7 +58,7 @@ namespace BLAsphyo {
             });
         }
 
-        public Task<bool> FormatedDAOClass(String FilePath, String Database, List<String> SelectedTables, bool AsphyoReferences, String Engine) {
+        public Task<bool> FormatedDAOClass(String FilePath, String Database, List<String> SelectedTables, bool AsphyoReferences) {
             return Task.Run(async () => {
                 foreach( String Table in SelectedTables ) {
                     try {
@@ -186,7 +187,7 @@ namespace BLAsphyo {
                         String EXIST_ALL_QUERY = EXIST_TABLE;
                         String EXIST_FUNCTION = Environment.NewLine + TypeParamsExist + Environment.NewLine + "\t\t\t" + LocalVariablesExist + Environment.NewLine + BindingParamsExist;
 
-                        String FILE = CreateDAOClass(TableName, INSERT_QUERY, INSERT_FUNCTION, UPDATE_QUERY, UPDATE_FUNCTION, DELETE_QUERY, DELETE_FUNCTION, SELECT_UNIQUE_QUERY, SELECT_UNIQUE_FUNCTION, SELECT_ALL_TABLE, EXIST_TABLE, EXIST_FUNCTION,AsphyoReferences, Engine).Trim();
+                        String FILE = CreateDAOClass(TableName, INSERT_QUERY, INSERT_FUNCTION, UPDATE_QUERY, UPDATE_FUNCTION, DELETE_QUERY, DELETE_FUNCTION, SELECT_UNIQUE_QUERY, SELECT_UNIQUE_FUNCTION, SELECT_ALL_TABLE, EXIST_TABLE, EXIST_FUNCTION,AsphyoReferences, BLDatabaseEngine.EngineInUse.ToString()).Trim();
                         File.WriteAllText(FilePath + "\\Model\\DAO\\" + TableName + "DAO.php", FILE, new UTF8Encoding(false));
                     }
                     catch( Exception ex ) {
@@ -197,7 +198,7 @@ namespace BLAsphyo {
             });
         }
 
-        private String CreateConnectionClass() {
+        private String CreateMySQLConnectionClass() {
             return new BEUAsphyo.Templates.BEUTemplates().getConnectionFile().Trim();
         }
 
@@ -211,7 +212,6 @@ namespace BLAsphyo {
             Template = Template.Replace("{{TOJSON}}", TOJSON);
             return Template;
         }
-
         private String CreateDAOClass(String TableName, String INSERT_QUERY, String INSERT_FUNCTION, String UPDATE_QUERY, String UPDATE_FUNCTION, String DELETE_QUERY, String DELETE_FUNCTION, String SELECT_UNIQUE_QUERY, String SELECT_UNIQUE_FUNCTION, String SELECT_ALL_TABLE, String EXIST_QUERY, String EXIST_FUNCTION, bool AsphyoReferences, String Engine) {
             String Template = AsphyoReferences ? new BEUAsphyo.Templates.BEUTemplates().getDAOWithAsphyoReferences() : new BEUAsphyo.Templates.BEUTemplates().getDAONormal();
             Template = Template.Replace("{{TableName}}", TableName);

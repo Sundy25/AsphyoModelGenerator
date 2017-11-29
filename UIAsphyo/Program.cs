@@ -13,7 +13,7 @@ namespace View {
         static void Main() {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Forms.InstanceConnection());
+            if( new Forms.InstanceConnection().ShowDialog() == DialogResult.OK ) Application.Run(new Forms.Main());
         }
     }
 }

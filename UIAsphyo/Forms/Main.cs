@@ -13,6 +13,7 @@ using MetroFramework.Controls;
 using BEUAsphyo.Exception;
 using System.IO;
 using UIAsphyo.Helpers;
+using System.Threading;
 
 namespace View.Forms {
     public partial class Main : MetroForm {
@@ -20,17 +21,14 @@ namespace View.Forms {
         private TreeView TableSelect;
         private TreeNode RootDatabaseNode;
         private String Path;
-        private String Engine;
-        private InstanceConnection oForm;
         private enum Languages { PHP, Java}
 
-        public Main(InstanceConnection oForm, String Engine) {
+        public Main() {
             InitializeComponent();
-            this.oForm = oForm;
+            cboLanguages.Enabled = false;
             this.TableSelect = new TreeView();
             this.RootDatabaseNode = new TreeNode();
             this.Path = "";
-            this.Engine = Engine;
         }
 
         private async void Main_Load(object sender, EventArgs e) {
@@ -130,11 +128,12 @@ namespace View.Forms {
                 lbGenerating.Enabled = true;
                 spGenerating.Visible = true;
                 lbGenerating.Visible = true;
+
                 if( rbtnGenerateAll.Checked ) {
-                    await new BLAsphyo.BLGenerator().FormatedBEUClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked);
-                    await new BLAsphyo.BLGenerator().FormatedDAOClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked, Engine);
+                    await new BLAsphyo.BLGenerator().FormatedBEUClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked, rbtnGenerateOnlyModels.Checked);
+                    await new BLAsphyo.BLGenerator().FormatedDAOClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked);
                 } else {
-                    await new BLAsphyo.BLGenerator().FormatedBEUClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked);
+                    await new BLAsphyo.BLGenerator().FormatedBEUClass(this.Path, cboDatabases.Text, getSelectedTables(), chUseAsphyo.Checked, rbtnGenerateOnlyModels.Checked);
                 }
                 Excecuted();
                 MessageBoxOK.Show("All the tables has been generated success");
@@ -150,8 +149,12 @@ namespace View.Forms {
         }
 
         private void btnChangeConnection_Click(object sender, EventArgs e) {
-            this.oForm.Visible = true;
-            this.Dispose();
+            Thread t = new Thread(() => {
+                if( new InstanceConnection().ShowDialog() == DialogResult.OK )
+                    Application.Run(new Main());
+            }); 
+            t.Start();
+            this.Close();
         }
 
         private void Excecuted() {
@@ -176,10 +179,6 @@ namespace View.Forms {
                 EnableControls(c);
             }
             con.Enabled = true;
-        }
-
-        private void Main_FormClosed(object sender, FormClosedEventArgs e) {
-            Application.Exit();
         }
     }
 }

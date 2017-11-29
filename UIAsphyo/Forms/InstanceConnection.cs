@@ -17,12 +17,15 @@ using UIAsphyo.Helpers;
 namespace View.Forms {
     public partial class InstanceConnection : MetroForm {
 
-        enum ConnectionTypes { WindowsAuthentication = 0, SQL = 1 };
+        enum ConnectionTypes { SQL = 1, WindowsAuthentication = 0, };
 
         public InstanceConnection() {
             InitializeComponent();
             cboAuthentication.DataSource = Enum.GetValues(typeof(ConnectionTypes));
             cboEngine.DataSource = Enum.GetValues(typeof(BLDatabaseEngine.DataSource));
+            cboEngine.SelectedItem = BLDatabaseEngine.DataSource.MySQL;
+            cboEngine_SelectionChangeCommitted(cboEngine, null);
+            cboEngine.Enabled = false;
         }
 
         private void cboAuthentication_SelectionChangeCommitted(object sender, EventArgs e) {
@@ -98,8 +101,7 @@ namespace View.Forms {
 
 
                 if( await new BLServer().testConnection() ) {
-                    this.Hide();
-                    new Main(this, BLDatabaseEngine.EngineInUse.ToString()).Show();
+                    this.DialogResult = DialogResult.OK;
                 }
 
             }
@@ -115,13 +117,6 @@ namespace View.Forms {
             if(MetroMessageBox.Show(this, "Are you sure do you wanna quit?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question, 130) == DialogResult.Yes ) {
                 Application.Exit();
             }
-        }
-
-        private void cleanControls(Control con) {
-            foreach( Control c in con.Controls ) {
-
-            }
-            con.Enabled = true;
         }
 
         private void EnableControls(Control con) {
