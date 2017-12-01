@@ -1,12 +1,12 @@
 <?php
-namespace Asphyo\src\Model\DAO{
+namespace src\Model\DAO{
 		/**
 		* This class contain all methods to interact with the data base
 		* @author lHersey
-		* @GitHub http://Github.com/lHersey
+		* @GitHub http://github.com/lHersey
 		*/
-	use Asphyo\bin\Model\Databases\MySQL;
-	use Asphyo\src\Model\Domain\{{TableName}};
+	use lib\Model\Databases\MySQL;
+	use src\Model\Domain\{{TableName}};
 	class {{TableName}}DAO extends MySQL{
 
 		//Add a {{TableName}}
@@ -47,7 +47,7 @@ namespace Asphyo\src\Model\DAO{
 		public function Exists({{TableName}} $o{{TableName}}){
 			$STMT = parent::PREPARE('{{EXISTL_TABLE}}');
 			{{ParametersExists}}
-			return parent::FirstOrDefault($STMT)->Count() > 0;
+			return Count(parent::FirstOrDefault($STMT)) > 0;
 		}
 	}
 }

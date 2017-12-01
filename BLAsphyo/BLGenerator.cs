@@ -65,6 +65,7 @@ namespace BLAsphyo {
                         DataTable oDT = await new BLServer().getTableInformation(Database, Table);
                         List<String> Cols = oDT.AsEnumerable().Where(x => !Convert.ToBoolean(x["IS_AUTO_INCREMENT"]) && !Convert.ToBoolean(x["IS_PRIMARY"])).Select(x => x["COLUMN_NAME"].ToString()).Distinct().ToList();
                         List<String> PrimaryKey = oDT.AsEnumerable().Where(x => Convert.ToBoolean(x["IS_PRIMARY"])).Select(x => x["COLUMN_NAME"].ToString()).ToList();
+                        List<String> PrimaryNoAutoIncrement = oDT.AsEnumerable().Where(x => Convert.ToBoolean(x["IS_PRIMARY"]) && !Convert.ToBoolean(x["IS_AUTO_INCREMENT"])).Select(x => x["COLUMN_NAME"].ToString()).Distinct().ToList();
                         /*
                          *  NOMBRE DE LA TABLA A GENERAR CON PRIMERA LETRA EN MATUSCULA
                          */
@@ -78,9 +79,9 @@ namespace BLAsphyo {
                         String DELETE_TABLE = "DELETE FROM " + TableName + " WHERE ";
                         String SELECT_UNIQUE_TABLE = "SELECT * FROM " + TableName + " WHERE ";
                         String SELECT_ALL_TABLE = "SELECT * FROM " + TableName + ";";
-                        String EXIST_TABLE = "SELECT EXISTS(SELECT 1 FROM " + TableName + " WHERE ";
+                        String EXIST_TABLE = "SELECT 1 FROM " + TableName + " WHERE ";
                         /*
-                         *  VATIABLES CON TIPO DE DATOS DE CADA PARAMETRO
+                         *  VARIABLES CON TIPO DE DATOS DE CADA PARAMETRO
                          */
                         String TypeParamsDelete = "$Params = ";
                         String TypeParamnsInsert = "$Params = ";
@@ -106,22 +107,36 @@ namespace BLAsphyo {
 
                         for( int i = 0; i < Cols.Count; i++ ) {
                             if( i == Cols.Count - 1 ) {
-                                INSERT_TABLE_BEGIN += Cols[i] + ") VALUES "; //Close params of insert query (after naming the tablw);
-                                INSERT_TABLE_END += "?);"; //Close params of insert query (end of the query (values));
+
                                 UPDATE_TABLE += Cols[i] + " = ? WHERE "; //Close final parms of update query (all the columns to update) before Where statment
 
-                                TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + Cols[i] + "());" + Environment.NewLine + "\t\t\t"; //GET THE PARaMETER DATATYPE
 
-                                BindingParamsInsert += " $"+Cols[i]+");" + Environment.NewLine + "\t\t\t";  //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
+                                if( PrimaryNoAutoIncrement.Count == 0 ) {
+                                    INSERT_TABLE_BEGIN += Cols[i] + ") VALUES "; //Close params of insert query (after naming the tablw);
+                                    INSERT_TABLE_END += "?);"; //Close params of insert query (end of the query (values));
+
+                                    TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + Cols[i] + "());" + Environment.NewLine + "\t\t\t"; //GET THE PARaMETER DATATYPE
+
+                                    BindingParamsInsert += " $" + Cols[i] + ");" + Environment.NewLine + "\t\t\t";  //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
+                                } else {
+                                    INSERT_TABLE_BEGIN += Cols[i] + ", ";
+                                    INSERT_TABLE_END += "?, ";
+
+                                    TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + Cols[i] + "()) . "; //GET THE PARaMETER DATATYPE
+
+                                    BindingParamsInsert += " $" + Cols[i] + ", "; //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
+                                }
                             } else {
                                 INSERT_TABLE_BEGIN += Cols[i] + ", ";
                                 INSERT_TABLE_END += "?, ";
+
                                 UPDATE_TABLE += Cols[i] + " = ?, ";
 
                                 TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + Cols[i] + "()) . "; //GET THE PARaMETER DATATYPE
 
                                 BindingParamsInsert += " $"+Cols[i]+", "; //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
                             }
+
 
                             BindingParamsUpdate += " $" + Cols[i] + ", ";//BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
 
@@ -131,12 +146,13 @@ namespace BLAsphyo {
                             LocalVariablesUpdate += "$" + Cols[i] + " = $o" + TableName + "->get" + Cols[i] + "();" + Environment.NewLine + "\t\t\t"; //Save in local variables values of the updated objectS
 
                         }
+
                         
                         for( int i = 0; i < PrimaryKey.Count; i++ ) {
                             if( i == PrimaryKey.Count - 1 ) {
                                 UPDATE_TABLE += PrimaryKey[i] + " = ?;";
                                 SELECT_UNIQUE_TABLE += PrimaryKey[i] + " = ?;";
-                                EXIST_TABLE += PrimaryKey[i] + " = ? LIMIT 1);";
+                                EXIST_TABLE += PrimaryKey[i] + " = ? LIMIT 1;";
                                 DELETE_TABLE += PrimaryKey[i] + " = ?;";
 
                                 BindingParamsUpdate += " $" + PrimaryKey[i] + ");" + Environment.NewLine + "\t\t\t";
@@ -169,6 +185,28 @@ namespace BLAsphyo {
                             LocalVariablesSelectUnique += "$" + PrimaryKey[i] + " = $o" + TableName + "->get" + PrimaryKey[i] + "();" + Environment.NewLine + "\t\t\t"; //Save in local variables value of the uniquer select (Where);
                             LocalVariablesExist += "$" + PrimaryKey[i] + " = $o" + TableName + "->get" + PrimaryKey[i] + "();" + Environment.NewLine + "\t\t\t";
                         }
+
+
+                        for( int i = 0; i < PrimaryNoAutoIncrement.Count; i++ ) { //The primary key that doesnt has any autoincrement,, need to be supplied by the user
+                            if( i == PrimaryNoAutoIncrement.Count - 1 ) {
+                                INSERT_TABLE_BEGIN += PrimaryNoAutoIncrement[i] + ") VALUES "; //Close params of insert query (after naming the tablw);
+                                INSERT_TABLE_END += "?);"; //Close params of insert query (end of the query (values));
+
+                                TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + PrimaryNoAutoIncrement[i] + "());" + Environment.NewLine + "\t\t\t"; //GET THE PARaMETER DATATYPE
+
+                                BindingParamsInsert += " $" + PrimaryNoAutoIncrement[i] + ");" + Environment.NewLine + "\t\t\t";  //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
+                            } else {
+                                INSERT_TABLE_BEGIN += PrimaryNoAutoIncrement[i] + ", ";
+                                INSERT_TABLE_END += "?, ";
+
+                                TypeParamnsInsert += "parent::TypeParam($o" + TableName + "->get" + PrimaryNoAutoIncrement[i] + "()) . "; //GET THE PARaMETER DATATYPE
+
+                                BindingParamsInsert += " $" + PrimaryNoAutoIncrement[i] + ", "; //BINDING THE LOCAL VARIABLES IN THE PREPARED STATMENT
+                            }
+
+                            LocalVariablesInsert += "$" + PrimaryNoAutoIncrement[i] + " = $o" + TableName + "->get" + PrimaryNoAutoIncrement[i] + "();" + Environment.NewLine + "\t\t\t";
+                        }
+
                         String INSERT_QUERY = INSERT_TABLE_BEGIN + INSERT_TABLE_END;
                         String INSERT_FUNCTION = Environment.NewLine + "\t\t\t"  + TypeParamnsInsert + Environment.NewLine + "\t\t\t" + LocalVariablesInsert + Environment.NewLine + "\t\t\t" + BindingParamsInsert;
 
